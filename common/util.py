@@ -235,3 +235,59 @@ def eval_perplexity(model, corpus, batch_size=10, time_size=35):
     print('')
     ppl = np.exp(total_loss / max_iters)
     return ppl
+
+def eval_seq2seq(model, question, correct, id_to_char, verbos=False, is_reverse=False):
+    correct = correct.flatten()
+    # 머릿글자
+    start_id = correct[0]
+    correct = correct[1:]
+    guess = model.generate(question, start_id, len(correct))
+
+    # 문자열로 변환
+    question = ''.join([id_to_char[int(c)] for c in question.flatten()])
+    correct = ''.join([id_to_char[int(c)] for c in correct])
+    guess = ''.join([id_to_char[int(c)] for c in guess])
+
+    if verbos:
+        if is_reverse:
+            question = question[::-1]
+
+        colors = {'ok': '\033[92m', 'fail': '\033[91m', 'close' : '\033[0m'}
+        print('Q', question)
+        print('T', correct)
+
+        is_windows = os.name == 'nt'
+
+        if correct == guess:
+            mark = colors['ok'] + '☑' + colors['close']
+            if is_windows:
+                mark = '0'
+            print(mark + ' ' + guess)
+        else:
+            mark = colors['fail'] + '☒' + colors['close']
+            if is_windows:
+                mark = 'X'
+            print(mark + ' ' + guess)
+        print('---')
+
+    return 1 if guess == correct else 0
+
+def create_context_target(corpus, window_size=1):
+    '''맥락과 타깃 생성
+    :param corpus: 말뭉치(단어 ID목록)
+    :param window_size: 윈도우 크기(윈도우 크기가 1이면 타깃 단어 좌우 한 단어씩이 맥락에 포)
+    :return: (맥락, 타겟)의  np.array
+    '''
+    target = corpus[window_size:-window_size]
+    contexts = []
+
+    for idx in range(window_size, len(corpus)-window_size):
+        cs = []
+        # window_size 만큼 타겟 단어 좌우 context 가져오기
+        for t in range(-window_size, window_size+1):
+            if t != 0:
+                cs.append(corpus[idx + t])
+        contexts.append(cs)
+
+    return np.array(contexts), np.array(target)
+
