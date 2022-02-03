@@ -211,13 +211,18 @@ class LSTM:
         Wx, Wh, b = self.params
         N, H = h_prev.shape
 
-        A = np.matmul(x, Wx) + np.matmul(h_prev, Wh) + b
+        A = np.dot(x, Wx) + np.dot(h_prev, Wh) + b
 
         # slice
         f = A[:, :H]
         g = A[:, H:2*H]
         i = A[:, 2*H:3*H]
         o = A[:, 3*H:]
+
+        f = sigmoid(f)
+        g = np.tanh(g)
+        i = sigmoid(i)
+        o = sigmoid(o)
 
         c_next = f * c_prev + g * i
         h_next = o * np.tanh(c_next)
@@ -304,7 +309,7 @@ class TimeLSTM:
             layer = self.layers[t]
             dx, dh, dc = layer.backward(dhs[:, t, :] + dh, dc)
             dxs[:, t, :] = dx
-            for i, grad in enumerate(grads):
+            for i, grad in enumerate(layer.grads):
                 grads[i] += grad
 
         for i, grad in enumerate(grads):
